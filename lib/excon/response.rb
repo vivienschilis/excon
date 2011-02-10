@@ -22,7 +22,7 @@ module Excon
         end
       end
       
-      unless block || (params.has_key?(:expects) && ![*params[:expects]].include?(response.status))
+      if !block || (params.has_key?(:expects) && ![*params[:expects]].include?(response.status))
         block = lambda {|c| response.body << c}
       end
       
