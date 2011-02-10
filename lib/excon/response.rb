@@ -22,10 +22,8 @@ module Excon
         end
       end
       
-      if !block || (params.has_key?(:expects) && ![*params[:expects]].include?(response.status))
-        block = lambda {|c| response.body << c}
-      end
-      
+      block = nil if params.has_key?(:expects) && ![*params[:expects]].include?(response.status)
+
       unless params[:method].to_s.casecmp('HEAD') == 0
 
         if response.headers.has_key?('Transfer-Encoding') && response.headers['Transfer-Encoding'].casecmp('chunked') == 0
@@ -35,19 +33,19 @@ module Excon
             break if chunk_size < 1
                                           # 2 == "/r/n".length
             (chunk = socket.read(chunk_size+2)).chop!
-            block.call chunk
+            block ? block.call(chunk) : response.body << chunk
           end
 
         elsif response.headers.has_key?('Connection') && response.headers['Connection'].casecmp('close') == 0
           chunk = socket.read
-          block.call chunk
-
+          block ? block.call(chunk) : response.body << chunk
+          
         elsif response.headers.has_key?('Content-Length')
           remaining = response.headers['Content-Length'].to_i
 
           while remaining > 0
             chunk = socket.read([CHUNK_SIZE, remaining].min)
-            block.call chunk
+            block ? block.call(chunk) : response.body << chunk
 
             remaining -= CHUNK_SIZE
           end
